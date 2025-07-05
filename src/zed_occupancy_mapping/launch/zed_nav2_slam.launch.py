@@ -35,7 +35,7 @@ def generate_launch_description():
                                    'config', 'nav2_params.yaml'),
         description='Full path to the ROS2 parameters file to use for Nav2')
     
-    # ZED Camera Launch
+    # ZED Camera Launch with proper positional tracking
     zed_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([zed_wrapper_dir, '/launch/zed_camera.launch.py']),
         launch_arguments={
@@ -46,6 +46,8 @@ def generate_launch_description():
             'publish_odom_tf': 'true',  # Enable ZED odometry TF publishing
             'odom_frame': 'odom',
             'base_frame': 'base_link',
+            'pos_tracking_enabled': 'true',
+            'publish_urdf': 'true',
         }.items()
     )
     
@@ -131,14 +133,15 @@ def generate_launch_description():
         arguments=['0', '0', '0.1', '0', '0', '0', 'base_link', 'zed2i_base_link']
     )
     
-    # Temporary static transform from odom to base_link (for initial setup)
-    # This will be replaced by ZED's odometry once it starts working
-    odom_to_base_tf = Node(
+    # Backup odometry publisher (in case ZED odometry fails to start)
+    # This provides a minimal odom->base_link transform until ZED takes over
+    backup_odom_publisher = Node(
         package='tf2_ros',
         executable='static_transform_publisher',
-        name='odom_to_base_tf',
+        name='backup_odom_publisher',
         arguments=['0', '0', '0', '0', '0', '0', 'odom', 'base_link']
     )
+    
     
     
     # RViz2 Launch
@@ -163,6 +166,6 @@ def generate_launch_description():
         nav2_launch,
         robot_state_publisher,
         static_transform_publisher,
-        odom_to_base_tf,
+        backup_odom_publisher,
         rviz_node,
     ])
